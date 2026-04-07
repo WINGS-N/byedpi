@@ -822,8 +822,23 @@ ssize_t udp_hook(struct eval *val,
 static int protect(int conn_fd, const char *path)
 {
     struct sockaddr_un sa;
+    memset(&sa, 0, sizeof(sa));
     sa.sun_family = AF_UNIX;
-    strcpy(sa.sun_path, path);
+    socklen_t sa_len;
+    size_t path_len = strlen(path);
+    if (path_len + 1 >= sizeof(sa.sun_path)) {
+        LOG(LOG_E, "protect path too long\n");
+        return -1;
+    }
+    if (*path == '/') {
+        strcpy(sa.sun_path, path);
+        sa_len = offsetof(struct sockaddr_un, sun_path) + path_len + 1;
+    }
+    else {
+        sa.sun_path[0] = 0;
+        memcpy(sa.sun_path + 1, path, path_len);
+        sa_len = offsetof(struct sockaddr_un, sun_path) + path_len + 1;
+    }
     
     int fd = socket(AF_UNIX, SOCK_STREAM, 0);
     if (fd < 0) {
@@ -834,7 +849,7 @@ static int protect(int conn_fd, const char *path)
     setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
     setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv));
     
-    int err = connect(fd, (struct sockaddr *)&sa, sizeof(sa));
+    int err = connect(fd, (struct sockaddr *)&sa, sa_len);
     if (err) {
         uniperror("connect");
         close(fd);
@@ -863,6 +878,11 @@ static int protect(int conn_fd, const char *path)
     }
     if (recv(fd, buf, 1, 0) < 1) {
         uniperror("recv");
+        close(fd);
+        return -1;
+    }
+    if (buf[0] != 1) {
+        LOG(LOG_E, "protect rejected\n");
         close(fd);
         return -1;
     }
