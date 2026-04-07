@@ -168,6 +168,8 @@ struct params {
     int need_free_n;
     
     const char *protect_path;
+    const char *socks_user;
+    const char *socks_pass;
     bool daemonize;
     const char *pid_file;
     int pid_fd;

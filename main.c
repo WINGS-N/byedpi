@@ -65,6 +65,8 @@ struct params params = {
 static const char help_text[] = {
     "    -i, --ip, <ip>            Listening IP, default 0.0.0.0\n"
     "    -p, --port <num>          Listening port, default 1080\n"
+    "        --socks-user <str>    SOCKS5 username\n"
+    "        --socks-pass <str>    SOCKS5 password\n"
     #ifdef DAEMON
     "    -D, --daemon              Daemonize\n"
     "    -w, --pidfile <filename>  Write PID to file\n"
@@ -137,6 +139,8 @@ const struct option options[] = {
     {"version",       0, 0, 'v'},
     {"ip",            1, 0, 'i'},
     {"port",          1, 0, 'p'},
+    {"socks-user",    1, 0, '0'},
+    {"socks-pass",    1, 0, '1'},
     #ifdef __linux__
     {"transparent",   0, 0, 'E'},
     #endif
@@ -780,6 +784,20 @@ int parse_args(int argc, char **argv)
             else
                 params.laddr.in.sin_port = htons(val);
             break;
+
+        case '0':
+            if (!*optarg || strlen(optarg) > 255)
+                invalid = 1;
+            else
+                params.socks_user = optarg;
+            break;
+
+        case '1':
+            if (!*optarg || strlen(optarg) > 255)
+                invalid = 1;
+            else
+                params.socks_pass = optarg;
+            break;
             
         case 'I':
             if (get_addr(optarg, &params.baddr) < 0)
@@ -1264,6 +1282,9 @@ int parse_args(int argc, char **argv)
             printf("?: %c\n", rez);
             return -1;
         }
+    }
+    if ((params.socks_user && !params.socks_pass) || (!params.socks_user && params.socks_pass)) {
+        invalid = 1;
     }
     if (invalid) {
         fprintf(stderr, "invalid value: -%c %s\n", rez, optarg);
