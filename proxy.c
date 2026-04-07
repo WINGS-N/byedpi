@@ -460,11 +460,19 @@ static int remote_sock(union sockaddr_u *dst, int type)
             return -1;
         }
     }
-    if (bind(sfd, (struct sockaddr *)&params.baddr, 
-            SA_SIZE(&params.baddr)) < 0) {
-        uniperror("bind");  
-        close(sfd);
-        return -1;
+    bool bind_unspecified = false;
+    if (params.baddr.sa.sa_family == AF_INET) {
+        bind_unspecified = params.baddr.in.sin_addr.s_addr == htonl(INADDR_ANY);
+    } else if (params.baddr.sa.sa_family == AF_INET6) {
+        bind_unspecified = IN6_IS_ADDR_UNSPECIFIED(&params.baddr.in6.sin6_addr);
+    }
+    if (!bind_unspecified) {
+        if (bind(sfd, (struct sockaddr *)&params.baddr,
+                SA_SIZE(&params.baddr)) < 0) {
+            uniperror("bind");
+            close(sfd);
+            return -1;
+        }
     }
     return sfd;
 }
