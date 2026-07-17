@@ -451,6 +451,20 @@ static int remote_sock(union sockaddr_u *dst, int type)
         close(sfd);
         return -1;
     }
+    #ifdef SO_MARK
+    // Set before bind/connect on purpose: the kernel picks both the route and the
+    // source address at connect() time from the socket's mark. A mark applied later
+    // (an nft output rule, say) only redirects the packet - it cannot undo a source
+    // address already taken from the wrong interface, so the SYN leaves with a
+    // foreign source and dies. Callers fronting a tunnel rely on this to keep their
+    // own upstream off that tunnel.
+    if (params.fwmark && setsockopt(sfd, SOL_SOCKET,
+            SO_MARK, (char *)&params.fwmark, sizeof(params.fwmark))) {
+        uniperror("setsockopt SO_MARK");
+        close(sfd);
+        return -1;
+    }
+    #endif
     if (dst->sa.sa_family == AF_INET6) {
         int no = 0;
         if (setsockopt(sfd, IPPROTO_IPV6,

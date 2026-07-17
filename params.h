@@ -147,6 +147,7 @@ struct params {
     bool custom_ttl;
     
     bool tfo;
+    int fwmark;
     unsigned int timeout, ptimeout;
     int to_count_lim;
     int to_bytes_lim;

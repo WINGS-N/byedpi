@@ -78,6 +78,7 @@ static const char help_text[] = {
     "    -N, --no-domain           Deny domain resolving\n"
     "    -U, --no-udp              Deny UDP association\n"
     "    -I  --conn-ip <ip>        Connection binded IP, default ::\n"
+    "        --fwmark <n>          SO_MARK on outgoing connections (Linux)\n"
     "    -b, --buf-size <size>     Buffer size, default 16384\n"
     "    -x, --debug <level>       Print logs, 0, 1 or 2\n"
     "    -g, --def-ttl <num>       TTL for all outgoing connections\n"
@@ -145,6 +146,7 @@ const struct option options[] = {
     {"transparent",   0, 0, 'E'},
     #endif
     {"conn-ip",       1, 0, 'I'},
+    {"fwmark",        1, 0, 1000},
     {"buf-size",      1, 0, 'b'},
     {"max-conn",      1, 0, 'c'},
     {"debug",         1, 0, 'x'},
@@ -802,6 +804,14 @@ int parse_args(int argc, char **argv)
         case 'I':
             if (get_addr(optarg, &params.baddr) < 0)
                 invalid = 1;
+            break;
+
+        case 1000:
+            val = strtol(optarg, &end, 0);
+            if (val < 0 || val > UINT_MAX || *end)
+                invalid = 1;
+            else
+                params.fwmark = val;
             break;
             
         case 'b':
